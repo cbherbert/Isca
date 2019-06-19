@@ -1,0 +1,6 @@
+module purge
+module load IntelComp/2017.4/OpenMPI/3.0.0
+
+export F90=mpifort
+export CC=mpicc
+export GFDL_MKMF_TEMPLATE=enslyon
