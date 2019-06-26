@@ -102,6 +102,13 @@ private
    real :: ml_depth=1               ! depth for heat capacity calculation
    real :: spinup_time=10800.     ! number of days to spin up heat capacity for - req. multiple of orbital_period
 
+   real :: q0atf = 0.3      ! amplitude of the non-zonal forcing (ATF 2012)
+   real :: cfatf = 0.0      ! phase velocity of the non-zonal forcing
+   real :: phi0atf = 0.0    ! center latitude for the non-zonal forcing
+   real :: dphiatf = 10.0   ! latitudinal extent of the non-zonal forcing
+   real :: pbatf = 8.e4, ptatf = 2.e4 ! vertical boundaries for the non-zonal forcing
+   integer :: katf  = 2     ! zonal wave-number of the non-zonal forcing
+
 
 !-----------------------------------------------------------------------
 
@@ -117,6 +124,8 @@ private
                               lapse, h_a, tau_s, orbital_period,         &
                               heat_capacity, ml_depth, spinup_time, stratosphere_t_option, P00
 
+   namelist /atf_forcing_nml/ q0atf, cfatf, phi0atf, dphiatf, pbatf, ptatf, katf
+
 !-----------------------------------------------------------------------
 
    character(len=128) :: version='$Id: hs_forcing.F90,v 19.0 2012/01/06 20:10:01 fms Exp $'
@@ -127,7 +136,7 @@ private
 
    real, allocatable, dimension(:,:) :: tg_prev
 
-   integer :: id_teq, id_h_trop, id_tdt, id_udt, id_vdt, id_tdt_diss, id_diss_heat, id_local_heating, id_newtonian_damping
+   integer :: id_teq, id_h_trop, id_tdt, id_udt, id_vdt, id_tdt_diss, id_diss_heat, id_local_heating, id_newtonian_damping, id_qatf
    real    :: missing_value = -1.e10
    real    :: xwidth, ywidth, xcenter, ycenter ! namelist values converted from degrees to radians
    real    :: srfamp ! local_heating_srfamp converted from deg/day to deg/sec
@@ -233,6 +242,10 @@ contains
         if (id_local_heating > 0) used = send_data ( id_local_heating, ttnd, Time)
       endif
 
+      call equatorial_forcing ( lat, lon, p_full, ttnd) ! adding the non-zonal heating term
+      tdt = tdt + ttnd
+      if (id_qatf > 0) used = send_data ( id_qatf, ttnd, Time)
+
 !      if (id_tdt > 0) used = send_data ( id_tdt, tdt, Time, is, js)
       if (id_tdt > 0) used = send_data ( id_tdt, tdt, Time)
 !      if (id_teq > 0) used = send_data ( id_teq, teq, Time, is, js)
@@ -305,6 +318,9 @@ contains
 #ifdef INTERNAL_FILE_NML
      read (input_nml_file, nml=hs_forcing_nml, iostat=io)
      ierr = check_nml_error(io, 'hs_forcing_nml')
+
+     read (input_nml_file, nml=atf_forcing_nml, iostat=io)
+     ierr = check_nml_error(io, 'atf_forcing_nml')
 #else
       if (file_exist('input.nml')) then
          unit = open_namelist_file ( )
@@ -314,12 +330,24 @@ contains
          enddo
   10     call close_file (unit)
       endif
+
+      if (file_exist('input.nml')) then
+         unit = open_namelist_file ( )
+         ierr=1
+         do while (ierr /= 0)
+            read  (unit, nml=atf_forcing_nml, iostat=io, end=20)
+            ierr = check_nml_error (io, 'atf_forcing_nml')
+         enddo
+  20     call close_file (unit)
+      endif
+
 #endif
 
 !     ----- write version info and namelist to log file -----
 
       call write_version_number (version,tagname)
       if (mpp_pe() == mpp_root_pe()) write (stdlog(),nml=hs_forcing_nml)
+      if (mpp_pe() == mpp_root_pe()) write (stdlog(),nml=atf_forcing_nml)
 
       if (no_forcing) return
 
@@ -448,6 +476,10 @@ contains
                    Time, 'Vertically integrated dissipative heating from Rayleigh damping (W/m2)', 'W/m2')
       endif
 
+      id_qatf = register_diag_field ( mod_name, 'q_eqf', axes(1:3), Time, &
+           'equatorial forcing', 'deg_K/sec' ,    &
+           missing_value=missing_value     )
+
      if(trim(local_heating_option) == 'from_file') then
        call interpolator_init(heating_source_interp, trim(local_heating_file)//'.nc', lonb, latb, data_out_of_bounds=(/CONSTANT/))
      endif
@@ -498,6 +530,41 @@ contains
  module_is_initialized = .false.
 
  end subroutine hs_forcing_end
+
+!#######################################################################
+
+ subroutine equatorial_forcing (lat, lon, p_full, tdt)
+
+!-----------------------------------------------------------------------
+!
+!   routine to compute thermal forcing for arnold, tziperman & farrell (2012)
+!
+!-----------------------------------------------------------------------
+
+   real, intent(in),  dimension(:,:)   :: lat, lon
+   real, intent(in),  dimension(:,:,:) :: p_full
+   real, intent(out), dimension(:,:,:) :: tdt
+
+   real, dimension(size(tdt,1),size(tdt,2)) :: qlonfact, qlatfact, press, qvertfact
+   real :: dphi_rad
+   integer :: i,j,k
+
+   ! compute longitude factor (lacking cfatf; no time dependence for now)
+   qlonfact(:,:) = cos(katf*lon(:,:))
+   ! compute latitude factor (lacking phi0atf)
+   dphi_rad = dphiatf*pi/180.
+   qlatfact(:,:) = exp(-lat(:,:)*lat(:,:)/(dphi_rad**2))
+
+   do k=1,size(tdt,3)
+      ! clip pressure to ensure the forcing vanishes outside the imposed pressure bounds
+      press(:,:) = min(max(p_full(:,:,k),ptatf),pbatf)
+      ! compute vertical factor
+      qvertfact(:,:) = sin(pi*(press(:,:)-ptatf)/(pbatf-ptatf))
+      ! compute total heating term (convert q0atf to K/s)
+      tdt(:,:,k) = (q0atf/86400.0)*qlonfact(:,:)*qlatfact(:,:)*qvertfact(:,:)
+   enddo
+
+ end subroutine equatorial_forcing
 
 !#######################################################################
 
