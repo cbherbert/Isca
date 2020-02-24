@@ -29,7 +29,7 @@ use mpp_mod, only: input_nml_file
 use fms_mod, only: open_namelist_file
 #endif
 
-use     constants_mod, only: KAPPA, CP_AIR, GRAV, PI, SECONDS_PER_DAY, &
+use     constants_mod, only: KAPPA, CP_AIR, GRAV, RADIUS, PI, SECONDS_PER_DAY, &
                             orbital_period, stefan, solar_const
 
 use           fms_mod, only: error_mesg, FATAL, file_exist,       &
@@ -242,7 +242,7 @@ contains
         if (id_local_heating > 0) used = send_data ( id_local_heating, ttnd, Time)
       endif
 
-      call equatorial_forcing ( lat, lon, p_full, ttnd) ! adding the non-zonal heating term
+      call equatorial_forcing ( Time, lat, lon, p_full, ttnd) ! adding the non-zonal heating term
       tdt = tdt + ttnd
       if (id_qatf > 0) used = send_data ( id_qatf, ttnd, Time)
 
@@ -533,7 +533,7 @@ contains
 
 !#######################################################################
 
- subroutine equatorial_forcing (lat, lon, p_full, tdt)
+ subroutine equatorial_forcing (Time, lat, lon, p_full, tdt)
 
 !-----------------------------------------------------------------------
 !
@@ -541,16 +541,19 @@ contains
 !
 !-----------------------------------------------------------------------
 
+   type(time_type), intent(in)         :: Time
    real, intent(in),  dimension(:,:)   :: lat, lon
    real, intent(in),  dimension(:,:,:) :: p_full
    real, intent(out), dimension(:,:,:) :: tdt
 
    real, dimension(size(tdt,1),size(tdt,2)) :: qlonfact, qlatfact, press, qvertfact
    real :: dphi_rad
-   integer :: i,j,k
+   integer :: i,j,k, seconds, days, dt_integer
 
    ! compute longitude factor (lacking cfatf; no time dependence for now)
-   qlonfact(:,:) = cos(katf*lon(:,:))
+   call get_time(Time, seconds, days)
+   dt_integer = SECONDS_PER_DAY*days + seconds
+   qlonfact(:,:) = cos(katf*(lon(:,:)-dt_integer*cfatf/RADIUS))
    ! compute latitude factor (lacking phi0atf)
    dphi_rad = dphiatf*pi/180.
    qlatfact(:,:) = exp(-lat(:,:)*lat(:,:)/(dphi_rad**2))
