@@ -3,12 +3,11 @@
 ## job shell:
 #$ -S /bin/bash
 ## job name:
-#$ -N isca_test
+#$ -N isca
 ## queue:
-###$ -q h48-E5-2667v2deb128
-#$ -q M6142deb384C
+#$ -q E5-2670deb128A,E5-2670deb128B,E5-2670deb128C,E5-2670deb128D,E5-2670deb128E,E5-2670deb128F
 ## parallel environment & cpu nb:
-#$ -pe mpi32_debian 32
+#$ -pe mpi16_debian 16
 ## SGE user environment:
 #$ -cwd
 ## Error/output files:
@@ -33,4 +32,4 @@ source /usr/share/lmod/lmod/init/bash
 module purge
 source "$GFDL_BASE/src/extra/env/enslyon"
 
-python "$GFDL_BASE/exp/superrotation/superrotation_nzforcing.py"
+python "$GFDL_BASE/exp/superrotation/superrotation_nzforcing.py" "-mca btl vader,openib,self -hostfile ${HOSTFILE}"
