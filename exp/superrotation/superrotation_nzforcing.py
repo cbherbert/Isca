@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 
-from isca import DryCodeBase, DiagTable, Experiment, Namelist, GFDL_BASE
+from isca import DryCodeBase, IscaCodeBase, DiagTable, Experiment, Namelist, GFDL_BASE
 
 NCORES = 16
 RESOLUTION = 'T42', 25  # T42 horizontal resolution, 25 levels in pressure
@@ -14,13 +14,10 @@ RESOLUTION = 'T42', 25  # T42 horizontal resolution, 25 levels in pressure
 # This method should ensure future, independent, reproducibility of results.
 # cb = DryCodeBase.from_repo(repo='https://github.com/isca/isca', commit='isca1.1')
 
-#cb.compile()  # compile the source code to working directory $GFDL_WORK/codebase
-
-
-class MatsunoGillExperiment(Experiment):
+class BaseExperiment(Experiment):
     """
-    This class subclasses the Experiment class for easily setting up Matsuno Gill experiments,
-    with a prescribed non-zonal tropical heating term of the form Q0*cos(kx)*exp(-y**2/2).
+    This class subclasses the Experiment class for easily setting up experiments.
+    It is an abstract class which only defines the structure of various experiments.
 
     Parameters
     ----------
@@ -31,7 +28,6 @@ class MatsunoGillExperiment(Experiment):
     -----------------
     codebase : CodeBase object
         Version of the code to use. Can be a directory or a git repo and commit id.
-        Default is GFDL_BASE environment variable.
     output_freq : int
         Output frequency, in days (default 90)
     namelist_mod : dict
@@ -39,8 +35,7 @@ class MatsunoGillExperiment(Experiment):
         Be careful that it should actually be a dictionnary of dictionnaries, each
         corresponding to a namelist.
     """
-    def __init__(self, name, codebase=DryCodeBase.from_directory(GFDL_BASE),
-                 output_freq=90, namelist_mod={}, **kwargs):
+    def __init__(self, name, codebase, output_freq=90, namelist_mod={}, **kwargs):
         # Compile the source code to working directory $GFDL_WORK/codebase
         codebase.compile()
         # compilation depends on computer specific settings.  The $GFDL_ENV
@@ -82,6 +77,42 @@ class MatsunoGillExperiment(Experiment):
         diag.add_field('dynamics', 'ucomp', time_avg=output_avg)
         diag.add_field('dynamics', 'vcomp', time_avg=output_avg)
         diag.add_field('dynamics', 'temp', time_avg=output_avg)
+
+        return diag
+
+
+class MatsunoGillExperiment(BaseExperiment):
+    """
+    This class subclasses the Experiment class for easily setting up Matsuno Gill experiments,
+    with a prescribed non-zonal tropical heating term of the form Q0*cos(kx)*exp(-y**2/2).
+
+    Parameters
+    ----------
+    name : str
+        The name of the experiment, used for the directory containing the model output.
+
+    Keyword Arguments
+    -----------------
+    codebase : CodeBase object
+        Version of the code to use. Can be a directory or a git repo and commit id.
+        Default is GFDL_BASE environment variable.
+    output_freq : int
+        Output frequency, in days (default 90)
+    namelist_mod : dict
+        Dictionary used to update the default namelist parameters for the experiment.
+        Be careful that it should actually be a dictionnary of dictionnaries, each
+        corresponding to a namelist.
+    """
+    def __init__(self, name, **kwargs):
+        codebase = kwargs.pop('codebase', DryCodeBase.from_directory(GFDL_BASE))
+        BaseExperiment.__init__(self, name, codebase, **kwargs)
+
+    @classmethod
+    def build_diag_table(cls, output_freq, output_avg):
+        """
+        Return the diagnostic table for the experiment.
+        """
+        diag = BaseExperiment.build_diag_table(output_freq, output_avg)
         diag.add_field('dynamics', 'vor', time_avg=output_avg)
         diag.add_field('dynamics', 'div', time_avg=output_avg)
         diag.add_field('hs_forcing', 'q_eqf', time_avg=output_avg)
@@ -156,12 +187,190 @@ class MatsunoGillExperiment(Experiment):
         return namelist
 
 
-exp = MatsunoGillExperiment('superrotation_nzforcing_q1_long',
-                            output_freq=1000,
+class MoistSuperrotationExperiment(BaseExperiment):
+    """
+    Moist version of the superrotation experiment
+
+    Parameters
+    ----------
+    name : str
+        The name of the experiment, used for the directory containing the model output.
+
+    Keyword Arguments
+    -----------------
+    codebase : CodeBase object
+        Version of the code to use. Can be a directory or a git repo and commit id.
+        Default is GFDL_BASE environment variable.
+    output_freq : int
+        Output frequency, in days (default 90)
+    namelist_mod : dict
+        Dictionary used to update the default namelist parameters for the experiment.
+        Be careful that it should actually be a dictionnary of dictionnaries, each
+        corresponding to a namelist.
+    """
+    def __init__(self, name, **kwargs):
+        codebase = kwargs.pop('codebase', IscaCodeBase.from_directory(GFDL_BASE))
+        BaseExperiment.__init__(self, name, codebase, **kwargs)
+
+    @classmethod
+    def build_diag_table(cls, output_freq, output_avg):
+        """
+        Return the diagnostic table for the experiment.
+        """
+        diag = BaseExperiment.build_diag_table(output_freq, output_avg)
+        diag.add_field('dynamics', 'vor', time_avg=output_avg)
+        diag.add_field('dynamics', 'div', time_avg=output_avg)
+        diag.add_field('atmosphere', 'dt_tg_diffusion', time_avg=output_avg)
+        diag.add_field('atmosphere', 'dt_tg_condensation', time_avg=output_avg)
+        diag.add_field('atmosphere', 'dt_tg_convection', time_avg=output_avg)
+        diag.add_field('atmosphere', 'precipitation', time_avg=output_avg)
+        diag.add_field('mixed_layer', 't_surf', time_avg=output_avg)
+        diag.add_field('dynamics', 'sphum', time_avg=output_avg)
+
+        return diag
+
+    @classmethod
+    def default_namelist(cls):
+        """
+        Return the default namelist for the experiment.
+        """
+        # define namelist values as python dictionary
+        # wrapped as a namelist object.
+        namelist = {
+            'main_nml': {
+                'dt_atmos': 300,
+                'days': 1800,
+                'current_time': 0,
+                'calendar': 'no_calendar'
+            },
+
+            'spectral_dynamics_nml': {
+                'damping_order': 4,                      # default: 2
+                'water_correction_limit': 200.e2,                 # default: 0
+                'reference_sea_level_press': 1.0e5,                  # default: 101325
+                'num_levels': 25,
+                'valid_range_t': [100., 800.],           # default: (100, 500)
+                'initial_sphum': [2.e-6],                  # default: 0
+                'vert_coord_option': 'input',         # default: 'even_sigma'
+                'scale_heights': 11.0,
+                'exponent': 7.0,
+                'surf_res': 0.5,
+                'robert_coeff': 0.03
+            },
+
+            'vert_coordinate_nml': {
+                'bk': [0.000000, 0.0117665, 0.0196679, 0.0315244, 0.0485411, 0.0719344, 0.1027829, 0.1418581, 0.1894648, 0.2453219, 0.3085103, 0.3775033, 0.4502789, 0.5244989, 0.5977253, 0.6676441, 0.7322627, 0.7900587, 0.8400683, 0.8819111, 0.9157609, 0.9422770, 0.9625127, 0.9778177, 0.9897489, 1.0000000],
+                'pk': [0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000],
+            },
+
+            'diag_manager_nml': {
+                'mix_snapshot_average_fields': False
+            },
+
+            'fms_nml': {
+                'domains_stack_size': 600000                        # default: 0
+            },
+
+            'fms_io_nml': {
+                'threading_write': 'single',                         # default: multi
+                'fileset_write': 'single',                           # default: multi
+            },
+
+            'atmosphere_nml': {
+                'idealized_moist_model': True  # False for Newtonian Cooling.  True for Isca/Frierson
+            },
+
+            'idealized_moist_phys_nml': {
+                'do_damping': True,
+                'turb': True,
+                'mixed_layer_bc': True,
+                'do_virtual': False,
+                'do_simple': True,
+                'roughness_mom': 3.21e-05,
+                'roughness_heat': 3.21e-05,
+                'roughness_moist': 3.21e-05,
+                'two_stream_gray': True,     #Use grey radiation
+                'convection_scheme': 'SIMPLE_BETTS_MILLER', #Use the simple Betts Miller convection scheme from Frierson
+            },
+
+            'vert_turb_driver_nml': {
+                'do_mellor_yamada': False,     # default: True
+                'do_diffusivity': True,        # default: False
+                'do_simple': True,             # default: False
+                'constant_gust': 0.0,          # default: 1.0
+                'use_tau': False
+            },
+
+            'diffusivity_nml': {
+                'do_entrain':False,
+                'do_simple': True,
+            },
+
+            'surface_flux_nml': {
+                'use_virtual_temp': False,
+                'do_simple': True,
+                'old_dtaudv': True
+            },
+
+            #Use a large mixed-layer depth, and the Albedo of the CTRL case in Jucker & Gerber, 2017
+            'mixed_layer_nml': {
+                'tconst' : 285.,
+                'prescribe_initial_dist':True,
+                'evaporation':True,
+                'depth': 2.5,                          #Depth of mixed layer used
+                'albedo_value': 0.31,                  #Albedo value used
+            },
+
+            'qe_moist_convection_nml': {
+                'rhbm':0.7,
+                'Tmin':160.,
+                'Tmax':350.
+            },
+
+            'betts_miller_nml': {
+                'rhbm': .7   ,
+                'do_simp': False,
+                'do_shallower': True,
+            },
+
+            'lscale_cond_nml': {
+                'do_simple':True,
+                'do_evap':True
+            },
+
+            'sat_vapor_pres_nml': {
+                'do_simple':True
+            },
+
+            'damping_driver_nml': {
+                'do_rayleigh': True,
+                'trayfric': -0.25,              # neg. value: time in *days*
+                'sponge_pbottom':  5000.,           #Bottom of the model's sponge down to 50hPa (units are Pa)
+                'do_conserve_energy': True,
+            },
+
+            'two_stream_gray_rad_nml': {
+                'rad_scheme': 'frierson',            #Select radiation scheme to use, which in this case is Frierson
+                'do_seasonal': False,                #do_seasonal=false uses the p2 insolation profile from Frierson 2006. do_seasonal=True uses the GFDL astronomy module to calculate seasonally-varying insolation.
+                'atm_abs': 0.2,                      # default: 0.0
+                'sw_diff': 0.0, #default 0.0
+                'solar_exponent': 4.0, #default 4.0
+                'ir_tau_eq': 6.0, # default 6.0
+                'ir_tau_pole': 1.5, # default 1.5
+                'odp': 1.0, #default 1.0
+                'linear_tau': 0.1, #default 0.1
+                'wv_exponent': 4.0 #default 4.0
+            }
+        }
+        return namelist
+
+exp = MatsunoGillExperiment('superrotation_nzforcing_q1_dh40_long',
+                            #output_freq=1000,
                             namelist_mod={'atf_forcing_nml': {'q0atf': 1.0, 'cfatf': 0, 'katf': 2,
                                                               'dphiatf': 10.0},
                                           'main_nml': {'days': 18000}},
                             resolution=RESOLUTION)
+
 #exp.set_resolution(*RESOLUTION)
 
 #Lets do a run!
