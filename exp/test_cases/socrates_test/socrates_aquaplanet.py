@@ -1,4 +1,4 @@
-import os
+import os, sys
 
 import numpy as np
 
@@ -57,15 +57,15 @@ diag.add_field('socrates', 'soc_surf_flux_lw_down', time_avg=True)
 diag.add_field('socrates', 'soc_surf_flux_sw_down', time_avg=True)
 #net (up) TOA and downard fluxes
 diag.add_field('socrates', 'soc_olr', time_avg=True)
-diag.add_field('socrates', 'soc_toa_sw', time_avg=True) 
+diag.add_field('socrates', 'soc_toa_sw', time_avg=True)
 diag.add_field('socrates', 'soc_toa_sw_down', time_avg=True)
 
-# additional output options commented out 
+# additional output options commented out
 #diag.add_field('socrates', 'soc_flux_lw', time_avg=True)
 #diag.add_field('socrates', 'soc_flux_sw', time_avg=True)
 #diag.add_field('socrates', 'soc_co2', time_avg=True)
-#diag.add_field('socrates', 'soc_ozone', time_avg=True) 
-#diag.add_field('socrates', 'soc_coszen', time_avg=True) 
+#diag.add_field('socrates', 'soc_ozone', time_avg=True)
+#diag.add_field('socrates', 'soc_coszen', time_avg=True)
 #diag.add_field('socrates', 'soc_spectral_olr', time_avg=True)
 
 exp.diag_table = diag
@@ -95,7 +95,7 @@ exp.namelist = namelist = Namelist({
         'use_pressure_interp_for_half_levels':False,
         'tidally_locked':False,
         #'solday': 90
-    }, 
+    },
     'idealized_moist_phys_nml': {
         'do_damping': True,
         'turb':True,
@@ -104,10 +104,10 @@ exp.namelist = namelist = Namelist({
         'do_simple': True,
         'roughness_mom':3.21e-05,
         'roughness_heat':3.21e-05,
-        'roughness_moist':3.21e-05,            
+        'roughness_moist':3.21e-05,
         'two_stream_gray': False,     #Use the grey radiation scheme
         'do_socrates_radiation': True,
-        'convection_scheme': 'SIMPLE_BETTS_MILLER', #Use simple Betts miller convection            
+        'convection_scheme': 'SIMPLE_BETTS_MILLER', #Use simple Betts miller convection
     },
 
     'vert_turb_driver_nml': {
@@ -117,7 +117,7 @@ exp.namelist = namelist = Namelist({
         'constant_gust': 0.0,          # default: 1.0
         'use_tau': False
     },
-    
+
     'diffusivity_nml': {
         'do_entrain':False,
         'do_simple': True,
@@ -126,7 +126,7 @@ exp.namelist = namelist = Namelist({
     'surface_flux_nml': {
         'use_virtual_temp': False,
         'do_simple': True,
-        'old_dtaudv': True    
+        'old_dtaudv': True
     },
 
     'atmosphere_nml': {
@@ -137,31 +137,31 @@ exp.namelist = namelist = Namelist({
     'mixed_layer_nml': {
         'tconst' : 285.,
         'prescribe_initial_dist':True,
-        'evaporation':True,  
+        'evaporation':True,
         'depth': 2.5,                          #Depth of mixed layer used
-        'albedo_value': 0.38,                  #Albedo value used      
+        'albedo_value': 0.38,                  #Albedo value used
     },
 
     'qe_moist_convection_nml': {
         'rhbm':0.7,
         'Tmin':160.,
-        'Tmax':350.   
+        'Tmax':350.
     },
-    
+
     'lscale_cond_nml': {
         'do_simple':True,
         'do_evap':True
     },
-    
+
     'sat_vapor_pres_nml': {
         'do_simple':True
     },
-    
+
     'damping_driver_nml': {
         'do_rayleigh': True,
         'trayfric': -0.5,              # neg. value: time in *days*
         'sponge_pbottom':  150., #Setting the lower pressure boundary for the model sponge layer in Pa.
-        'do_conserve_energy': True,      
+        'do_conserve_energy': True,
     },
 
     # FMS Framework configuration
@@ -179,7 +179,7 @@ exp.namelist = namelist = Namelist({
     },
 
     'spectral_dynamics_nml': {
-        'damping_order': 4,             
+        'damping_order': 4,
         'water_correction_limit': 200.e2,
         'reference_sea_level_press':1.0e5,
         'num_levels':40,      #How many model pressure levels to use
@@ -196,10 +196,9 @@ exp.namelist = namelist = Namelist({
 
 #Lets do a run!
 if __name__=="__main__":
-
-        cb.compile()
-        #Set up the experiment object, with the first argument being the experiment name.
-        #This will be the name of the folder that the data will appear in.
-        exp.run(1, use_restart=False, num_cores=NCORES, overwrite_data=False)
-        for i in range(2,121):
-            exp.run(i, num_cores=NCORES)
+    cb.compile()
+    #Set up the experiment object, with the first argument being the experiment name.
+    #This will be the name of the folder that the data will appear in.
+    exp.run(1, use_restart=False, num_cores=NCORES, mpirun_opts=' '.join(sys.argv[1:]))
+    for i in range(2,121):
+        exp.run(i, num_cores=NCORES, mpirun_opts=' '.join(sys.argv[1:]))
