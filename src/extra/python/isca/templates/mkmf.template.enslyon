@@ -3,7 +3,7 @@
 # mkmf -t template.ifc -c"-Duse_libMPI -Duse_netCDF" path_names /usr/local/include
 NETCDFF_INC = `nf-config --includedir`
 CPPFLAGS = -I$(NETCDFF_INC)
-#NETCDF_LIBS = `nc-config --libs`
+NETCDF_LIBS = `nf-config --flibs`
 
 # FFLAGS:
 #  -fpp: Use the fortran preprocessor

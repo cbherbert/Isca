@@ -34,8 +34,8 @@ MODULE socrates_interface_mod
   USE def_spectrum
   USE constants_mod, only: grav, rdgas, rvgas, cp_air
   USE fms_mod, only: stdlog, FATAL, WARNING, error_mesg
-  USE interpolator_mod, only: interpolate_type  
-  USE soc_constants_mod  
+  USE interpolator_mod, only: interpolate_type
+  USE soc_constants_mod
 
   IMPLICIT NONE
 
@@ -51,11 +51,11 @@ MODULE socrates_interface_mod
   TYPE(StrCtrl) :: control_lw, control_lw_hires
 
   ! Diagnostic IDs, name, and missing value
-  INTEGER :: id_soc_spectral_olr 
+  INTEGER :: id_soc_spectral_olr
 !   INTEGER :: id_soc_surf_spectrum_sw !not implemented yet
   INTEGER :: id_soc_tdt_sw, id_soc_tdt_lw, id_soc_tdt_rad
-  INTEGER :: id_soc_surf_flux_lw, id_soc_surf_flux_sw 
-  INTEGER :: id_soc_surf_flux_lw_down, id_soc_surf_flux_sw_down 
+  INTEGER :: id_soc_surf_flux_lw, id_soc_surf_flux_sw
+  INTEGER :: id_soc_surf_flux_lw_down, id_soc_surf_flux_sw_down
   INTEGER :: id_soc_flux_lw, id_soc_flux_sw
   INTEGER :: id_soc_olr, id_soc_toa_sw
   INTEGER :: id_soc_toa_sw_down
@@ -71,7 +71,7 @@ MODULE socrates_interface_mod
   REAL :: dt_last !Time of last radiation calculation - used to tell whether it is time to recompute radiation or not
   REAL(r_def), allocatable, dimension(:,:,:) :: tdt_soc_sw_store, tdt_soc_lw_store
   REAL(r_def), allocatable, dimension(:,:,:) :: thd_sw_flux_net_store, thd_lw_flux_net_store
-  REAL(r_def), allocatable, dimension(:,:,:) :: thd_co2_store, thd_ozone_store 
+  REAL(r_def), allocatable, dimension(:,:,:) :: thd_co2_store, thd_ozone_store
   REAL(r_def), allocatable, dimension(:,:)   :: net_surf_sw_down_store, surf_lw_down_store, surf_lw_net_store, &
                                                 surf_sw_down_store, toa_sw_down_store, &
                                                 toa_sw_store, olr_store, coszen_store
@@ -84,7 +84,7 @@ CONTAINS
     !! Initialises Socrates spectra, arrays, and constants
 
     USE astronomy_mod, only: astronomy_init
-    USE interpolator_mod, only: interpolate_type, interpolator_init, ZERO  
+    USE interpolator_mod, only: interpolate_type, interpolator_init, ZERO
     USE socrates_config_mod
 
     ! Arguments
@@ -94,7 +94,7 @@ CONTAINS
     INTEGER, INTENT(in)               :: is, ie, js, je, num_levels
     REAL, INTENT(in) , DIMENSION(:,:)   :: lat
     REAL, INTENT(in) , DIMENSION(:,:)   :: lonb, latb
-        
+
     integer :: io, stdlog_unit
     integer :: res, time_step_seconds
     real    :: day_in_s_check
@@ -148,7 +148,7 @@ write(stdlog_unit, socrates_rad_nml)
 
           if(dt_rad_avg .le. 0) dt_rad_avg = dt_rad
 
-        if ((tidally_locked.eq..true.) .and. (frierson_solar_rad .eq. .true.)) then
+        if ((tidally_locked.eqv..true.) .and. (frierson_solar_rad .eqv. .true.)) then
             call error_mesg( 'socrates_init', &
             'tidally_locked and frierson_solar_rad cannot both be true',FATAL)
         endif
@@ -195,7 +195,7 @@ write(stdlog_unit, socrates_rad_nml)
     CALL read_spectrum(control_lw_hires%spectral_file,spectrum_lw_hires)
     CALL read_spectrum(control_sw%spectral_file,spectrum_sw)
     CALL read_spectrum(control_sw_hires%spectral_file,spectrum_sw_hires)
-    
+
     ! Set Socrates configuration
     CALL read_control(control_lw,spectrum_lw)
     CALL read_control(control_lw_hires,spectrum_lw_hires)
@@ -210,18 +210,18 @@ write(stdlog_unit, socrates_rad_nml)
 
     if(socrates_hires_mode) then
         allocate(soc_bins_lw(spectrum_lw_hires%dim%nd_band))
-        allocate(soc_bins_sw(spectrum_sw_hires%dim%nd_band))    
-        soc_bins_lw = spectrum_lw_hires%Basic%wavelength_long            
-        soc_bins_sw = spectrum_sw_hires%Basic%wavelength_short       
+        allocate(soc_bins_sw(spectrum_sw_hires%dim%nd_band))
+        soc_bins_lw = spectrum_lw_hires%Basic%wavelength_long
+        soc_bins_sw = spectrum_sw_hires%Basic%wavelength_short
     else
         allocate(soc_bins_lw(spectrum_lw%dim%nd_band))
-        allocate(soc_bins_sw(spectrum_sw%dim%nd_band))    
-        soc_bins_lw = spectrum_lw%Basic%wavelength_long            
-        soc_bins_sw = spectrum_sw%Basic%wavelength_short              
-    endif    
-    
-    !Need to actually give bins arrays values    
-    
+        allocate(soc_bins_sw(spectrum_sw%dim%nd_band))
+        soc_bins_lw = spectrum_lw%Basic%wavelength_long
+        soc_bins_sw = spectrum_sw%Basic%wavelength_short
+    endif
+
+    !Need to actually give bins arrays values
+
     id_soc_bins_lw = diag_axis_init('soc_bins_lw', soc_bins_lw, 'cm^-1', 'n', 'socrates lw spectral bin centers', set_name='socrates_lw_bins')
 
     id_soc_bins_sw = diag_axis_init('soc_bins_sw', soc_bins_sw, 'cm^-1', 'n', 'socrates sw spectral bin centers', set_name='socrates_sw_bins')
@@ -265,12 +265,12 @@ write(stdlog_unit, socrates_rad_nml)
 
     id_soc_surf_flux_sw = &
          register_diag_field ( soc_mod_name, 'soc_surf_flux_sw', axes(1:2), Time, &
-         'socrates Net SW surface flux (down)', & 
+         'socrates Net SW surface flux (down)', &
          'watts/m2', missing_value=missing_value               )
 
     id_soc_surf_flux_sw_down = &
          register_diag_field ( soc_mod_name, 'soc_surf_flux_sw_down', axes(1:2), Time, &
-         'socrates SW surface flux down', & 
+         'socrates SW surface flux down', &
          'watts/m2', missing_value=missing_value               )
 
     id_soc_olr = &
@@ -280,12 +280,12 @@ write(stdlog_unit, socrates_rad_nml)
 
     id_soc_toa_sw = &
          register_diag_field ( soc_mod_name, 'soc_toa_sw', axes(1:2), Time, &
-         'socrates Net TOA SW flux (down)', & 
+         'socrates Net TOA SW flux (down)', &
          'watts/m2', missing_value=missing_value               )
 
     id_soc_toa_sw_down = &
          register_diag_field ( soc_mod_name, 'soc_toa_sw_down', axes(1:2), Time, &
-         'socrates TOA SW flux down', & 
+         'socrates TOA SW flux down', &
          'watts/m2', missing_value=missing_value               )
 
     id_soc_flux_lw = &
@@ -295,7 +295,7 @@ write(stdlog_unit, socrates_rad_nml)
 
     id_soc_flux_sw = &
          register_diag_field ( soc_mod_name, 'soc_flux_sw', (/axes(1),axes(2),axes(4)/), Time, &
-         'socrates Net SW flux (up)', & 
+         'socrates Net SW flux (up)', &
          'watts/m2', missing_value=missing_value               )
 
     id_soc_coszen = &
@@ -317,16 +317,16 @@ write(stdlog_unit, socrates_rad_nml)
       if(do_read_ozone)then
          call interpolator_init (o3_interp, trim(ozone_file_name)//'.nc', lonb, latb, data_out_of_bounds=(/ZERO/))
       endif
-      
+
       if(do_read_co2)then
          call interpolator_init (co2_interp, trim(co2_file_name)//'.nc', lonb, latb, data_out_of_bounds=(/ZERO/))
-      endif      
+      endif
 
     if (mod((size(lonb,1)-1)*(size(latb,1)-1), chunk_size) .ne. 0) then
-    
+
         call error_mesg( 'socrates_init', &
                      'chunk_size must equally divide number of points per processor, which it currently does not.',FATAL)
-    
+
     endif
 
     ! Number of bands
@@ -335,7 +335,7 @@ write(stdlog_unit, socrates_rad_nml)
     n_soc_bands_sw = spectrum_sw%dim%nd_band
     n_soc_bands_sw_hires = spectrum_sw_hires%dim%nd_band
 
-    if (socrates_hires_mode == .True.) then
+    if (socrates_hires_mode .eqv. .True.) then
         allocate(outputted_soc_spectral_olr(size(lonb,1)-1, size(latb,2)-1, n_soc_bands_lw_hires))
     else
         allocate(outputted_soc_spectral_olr(size(lonb,1)-1, size(latb,2)-1, n_soc_bands_lw ))
@@ -343,59 +343,59 @@ write(stdlog_unit, socrates_rad_nml)
 
     if(store_intermediate_rad) then
 
-        ! required for computation 
+        ! required for computation
         allocate(tdt_soc_sw_store(size(lonb,1)-1, size(latb,2)-1, num_levels))
         allocate(tdt_soc_lw_store(size(lonb,1)-1, size(latb,2)-1, num_levels))
         allocate(net_surf_sw_down_store(size(lonb,1)-1, size(latb,2)-1))
         allocate(surf_lw_down_store(size(lonb,1)-1, size(latb,2)-1))
 
-        ! only required for output 
+        ! only required for output
         if (id_soc_surf_flux_lw > 0) then
             allocate(surf_lw_net_store(size(lonb,1)-1, size(latb,2)-1))
         endif
 
-        if (id_soc_flux_lw > 0) then 
+        if (id_soc_flux_lw > 0) then
             allocate(thd_lw_flux_net_store(size(lonb,1)-1, size(latb,2)-1, num_levels+1))
-        endif 
+        endif
 
-        if (id_soc_flux_sw > 0) then 
+        if (id_soc_flux_sw > 0) then
             allocate(thd_sw_flux_net_store(size(lonb,1)-1, size(latb,2)-1, num_levels+1))
-        endif 
+        endif
 
-        if (id_soc_surf_flux_sw_down > 0) then 
+        if (id_soc_surf_flux_sw_down > 0) then
             allocate(surf_sw_down_store(size(lonb,1)-1, size(latb,2)-1))
-        endif 
+        endif
 
-        if (id_soc_olr > 0) then 
+        if (id_soc_olr > 0) then
             allocate(olr_store(size(lonb,1)-1, size(latb,2)-1))
-        endif 
+        endif
 
-        if (id_soc_toa_sw > 0) then 
+        if (id_soc_toa_sw > 0) then
             allocate(toa_sw_store(size(lonb,1)-1, size(latb,2)-1))
         endif
-        if (id_soc_toa_sw_down > 0) then 
+        if (id_soc_toa_sw_down > 0) then
             allocate(toa_sw_down_store(size(lonb,1)-1, size(latb,2)-1))
         endif
-        if (id_soc_coszen > 0) then 
+        if (id_soc_coszen > 0) then
             allocate(coszen_store(size(lonb,1)-1, size(latb,2)-1))
         endif
 
-        if (id_soc_ozone > 0) then 
+        if (id_soc_ozone > 0) then
             allocate(thd_ozone_store(size(lonb,1)-1, size(latb,2)-1, num_levels))
-        endif 
+        endif
 
-        if (id_soc_co2 > 0 ) then 
+        if (id_soc_co2 > 0 ) then
             allocate(thd_co2_store(size(lonb,1)-1, size(latb,2)-1, num_levels))
         endif
 
-        ! spectral output currently not available as required axis not present in diag file 
-        if (id_soc_spectral_olr > 0) then 
-            if (socrates_hires_mode == .True.) then
+        ! spectral output currently not available as required axis not present in diag file
+        if (id_soc_spectral_olr > 0) then
+            if (socrates_hires_mode .eqv. .True.) then
                 allocate(spectral_olr_store(size(lonb,1)-1, size(latb,2)-1, n_soc_bands_lw_hires))
             else
                 allocate(spectral_olr_store(size(lonb,1)-1, size(latb,2)-1, n_soc_bands_lw ))
             endif
-        endif 
+        endif
 
     endif
 
@@ -469,14 +469,14 @@ write(stdlog_unit, socrates_rad_nml)
     real(r_def), intent(in) :: rlon(:,:)
     real(r_def), intent(in) :: rlat(:,:)
     real(r_def), intent(in) :: fms_z_full(:,:,:), fms_z_half(:,:,:)
-    real(r_def), intent(in) :: fms_rrsun 
+    real(r_def), intent(in) :: fms_rrsun
 
 
     ! Output arrays
     real(r_def), intent(out) :: output_heating_rate(:,:,:)
     real(r_def), intent(out) :: output_flux_up(:,:,:)
     real(r_def), intent(out) :: output_flux_down(:,:,:)
-    real(r_def), intent(out), optional :: output_flux_direct(:,:,:)    
+    real(r_def), intent(out), optional :: output_flux_direct(:,:,:)
     real(r_def), intent(out), optional :: output_soc_spectral_olr(:,:,:)
     real(r_def), intent(out), optional :: t_half_level_out(size(fms_temp,1),size(fms_temp,2),size(fms_temp,3)+1)
 
@@ -531,16 +531,16 @@ write(stdlog_unit, socrates_rad_nml)
           input_t = reshape(fms_temp(:,:,:),(/si*sj,sk /))
           input_p = reshape(fms_p_full(:,:,:),(/si*sj,sk /))
           input_p_level = reshape(fms_p_half(:,:,:),(/si*sj,sk+1 /))
-          
-          if (account_for_effect_of_water == .true.) then
+
+          if (account_for_effect_of_water .eqv. .true.) then
               input_mixing_ratio = reshape(fms_spec_hum(:,:,:) / (1. - fms_spec_hum(:,:,:)),(/si*sj,sk /)) !Mass mixing ratio = q / (1-q)
           else
               input_mixing_ratio = 0.0
           endif
-          
-          if (account_for_effect_of_ozone == .true.) then
+
+          if (account_for_effect_of_ozone .eqv. .true.) then
             input_o3_mixing_ratio = reshape(fms_ozone(:,:,:),(/si*sj,sk /))
-          else         
+          else
             input_o3_mixing_ratio = 0.0
           endif
 
@@ -568,10 +568,10 @@ write(stdlog_unit, socrates_rad_nml)
              END DO
 !              input_t_level(:,n_layer) = input_t(:,n_layer) + input_t(:,n_layer) - input_t_level(:,n_layer-1)
              input_t_level(:,n_layer) = input_t(:,n_layer) + (input_t(:,n_layer)-input_t(:,n_layer-1)) * ((input_p_level(:,n_layer)-input_p(:,n_layer))/(input_p(:,n_layer)-input_p(:,n_layer-1)))
-             
+
 !              input_t_level(:,0) = input_t(:,1) - (input_t_level(:,1) - input_t(:,1))
              input_t_level(:,0) = input_t(:,1) + (input_t(:,2)-input_t(:,1)) * ((input_p_level(:,0)-input_p(:,1))/(input_p(:,2)-input_p(:,1)))
-             
+
           END DO
        else
 
@@ -595,10 +595,10 @@ write(stdlog_unit, socrates_rad_nml)
           soc_heating_rate = 0.0
 
           ! Test if LW or SW mode
-          if (soc_lw_mode == .TRUE.) then
+          if (soc_lw_mode .eqv. .TRUE.) then
              control_lw%isolir = 2
              CALL read_control(control_lw, spectrum_lw)
-             if (socrates_hires_mode == .FALSE.) then
+             if (socrates_hires_mode .eqv. .FALSE.) then
                 control_calc = control_lw
                 spectrum_calc = spectrum_lw
              else
@@ -609,7 +609,7 @@ write(stdlog_unit, socrates_rad_nml)
           else
              control_sw%isolir = 1
              CALL read_control(control_sw, spectrum_sw)
-             if(socrates_hires_mode == .FALSE.) then
+             if(socrates_hires_mode .eqv. .FALSE.) then
                 control_calc = control_sw
                 spectrum_calc = spectrum_sw
              else
@@ -631,14 +631,14 @@ write(stdlog_unit, socrates_rad_nml)
             idx_chunk_start = (i_chunk-1)*chunk_size + 1
             idx_chunk_end   = (i_chunk)*chunk_size
 
-          if (soc_lw_mode==.TRUE.) then
- 
+          if (soc_lw_mode.eqv..TRUE.) then
+
             CALL socrates_calc(Time_diag, control_calc, spectrum_calc,                      &
                n_profile_chunk, n_layer, input_n_cloud_layer, input_n_aer_mode,             &
                input_cld_subcol_gen, input_cld_subcol_req,                                  &
-               input_p(idx_chunk_start:idx_chunk_end,:),                                    & 
+               input_p(idx_chunk_start:idx_chunk_end,:),                                    &
                input_t(idx_chunk_start:idx_chunk_end,:),                                    &
-               input_t_level(idx_chunk_start:idx_chunk_end,:),                              & 
+               input_t_level(idx_chunk_start:idx_chunk_end,:),                              &
                input_d_mass(idx_chunk_start:idx_chunk_end,:),                               &
                input_density(idx_chunk_start:idx_chunk_end,:),                              &
                input_mixing_ratio(idx_chunk_start:idx_chunk_end,:),                         &
@@ -688,27 +688,27 @@ write(stdlog_unit, socrates_rad_nml)
 
           ! Set output arrays
           output_flux_up(:,:,:) = reshape(soc_flux_up(:,:),(/si,sj,sk+1 /))
-          output_flux_down(:,:,:) = reshape(soc_flux_down(:,:),(/si,sj,sk+1 /))          
+          output_flux_down(:,:,:) = reshape(soc_flux_down(:,:),(/si,sj,sk+1 /))
 
           if(present(output_flux_direct)) then
-              output_flux_direct(:,:,:) = reshape(soc_flux_direct(:,:),(/si,sj,sk+1 /))          
+              output_flux_direct(:,:,:) = reshape(soc_flux_direct(:,:),(/si,sj,sk+1 /))
           endif
-          
+
           output_heating_rate(:,:,:) = reshape(soc_heating_rate(:,:),(/si,sj,sk /))
 
-          if (soc_lw_mode == .TRUE.) then
+          if (soc_lw_mode .eqv. .TRUE.) then
               output_soc_spectral_olr(:,:,:) = reshape(soc_spectral_olr(:,:),(/si,sj,int(n_soc_bands_lw,i_def) /))
           endif
 
   end subroutine socrates_interface
 
 subroutine run_socrates(Time, Time_diag, rad_lat, rad_lon, temp_in, q_in, t_surf_in, p_full_in, p_half_in, z_full_in, z_half_in, albedo_in, &
-       temp_tend, net_surf_sw_down, surf_lw_down, delta_t)  
+       temp_tend, net_surf_sw_down, surf_lw_down, delta_t)
 
     use astronomy_mod, only: diurnal_solar
     use constants_mod,         only: pi, wtmco2, wtmozone, rdgas, gas_constant
     use interpolator_mod,only: interpolator
-    USE socrates_config_mod    
+    USE socrates_config_mod
 
     ! Input time
     type(time_type), intent(in)           :: Time, Time_diag
@@ -716,7 +716,7 @@ subroutine run_socrates(Time, Time_diag, rad_lat, rad_lon, temp_in, q_in, t_surf
     real, intent(in), dimension(:,:,:)   :: temp_in, p_full_in, q_in, z_full_in
     real, intent(in), dimension(:,:,:)  :: p_half_in, z_half_in
     real, intent(inout), dimension(:,:,:) :: temp_tend
-    real, intent(out), dimension(:,:)   :: net_surf_sw_down, surf_lw_down 
+    real, intent(out), dimension(:,:)   :: net_surf_sw_down, surf_lw_down
     real, intent(in) :: delta_t
 
     integer(i_def) :: n_profile, n_layer
@@ -728,12 +728,12 @@ subroutine run_socrates(Time, Time_diag, rad_lat, rad_lon, temp_in, q_in, t_surf
     logical :: soc_lw_mode, used
     integer :: seconds, days, year_in_s
     real :: r_seconds, r_days, r_total_seconds, frac_of_day, frac_of_year, gmt, time_since_ae, rrsun, dt_rad_radians, day_in_s, r_solday, r_dt_rad_avg
-    real, dimension(size(temp_in,1), size(temp_in,2)) :: coszen, fracsun, surf_lw_net, olr, toa_sw, p2, toa_sw_down, surf_sw_down 
+    real, dimension(size(temp_in,1), size(temp_in,2)) :: coszen, fracsun, surf_lw_net, olr, toa_sw, p2, toa_sw_down, surf_sw_down
     real, dimension(size(temp_in,1), size(temp_in,2), size(temp_in,3)) :: ozone_in, co2_in
     real, dimension(size(temp_in,1), size(temp_in,2), size(temp_in,3)+1) :: thd_sw_flux_net, thd_lw_flux_net
     type(time_type) :: Time_loc
 
-    
+
 
         !check if we really want to recompute radiation
         ! alarm
@@ -751,47 +751,47 @@ subroutine run_socrates(Time, Time_diag, rad_lat, rad_lon, temp_in, q_in, t_surf
                 net_surf_sw_down = real(net_surf_sw_down_store)
                 surf_lw_down = real(surf_lw_down_store)
 
-                !only required for output 
-                if (id_soc_surf_flux_lw > 0) then 
-                    surf_lw_net = real(surf_lw_net_store) 
-                endif 
-                
-                if (id_soc_flux_lw > 0) then 
-                    thd_lw_flux_net = thd_lw_flux_net_store
-                endif 
-                
-                if (id_soc_flux_sw > 0) then 
-                    thd_sw_flux_net = thd_sw_flux_net_store
-                endif 
+                !only required for output
+                if (id_soc_surf_flux_lw > 0) then
+                    surf_lw_net = real(surf_lw_net_store)
+                endif
 
-                if (id_soc_surf_flux_sw_down > 0) then 
+                if (id_soc_flux_lw > 0) then
+                    thd_lw_flux_net = thd_lw_flux_net_store
+                endif
+
+                if (id_soc_flux_sw > 0) then
+                    thd_sw_flux_net = thd_sw_flux_net_store
+                endif
+
+                if (id_soc_surf_flux_sw_down > 0) then
                     surf_sw_down = surf_sw_down_store
-                endif 
+                endif
 
                 if (id_soc_olr > 0) then
                     olr = olr_store
-                endif 
+                endif
 
-                if (id_soc_toa_sw > 0) then 
-                    toa_sw = toa_sw_store 
-                endif 
+                if (id_soc_toa_sw > 0) then
+                    toa_sw = toa_sw_store
+                endif
 
-                if (id_soc_toa_sw_down > 0) then 
-                    toa_sw_down = toa_sw_down_store 
-                endif 
+                if (id_soc_toa_sw_down > 0) then
+                    toa_sw_down = toa_sw_down_store
+                endif
 
-                if (id_soc_coszen > 0) then 
+                if (id_soc_coszen > 0) then
                     coszen = coszen_store
-                endif 
+                endif
 
-                if (id_soc_ozone > 0) then 
+                if (id_soc_ozone > 0) then
                     ozone_in = thd_ozone_store
-                endif 
+                endif
 
-                if (id_soc_co2 > 0) then 
+                if (id_soc_co2 > 0) then
                     co2_in = thd_co2_store
-                endif 
-                
+                endif
+
                 if (id_soc_spectral_olr > 0) then
                     outputted_soc_spectral_olr = spectral_olr_store
                 endif
@@ -812,8 +812,8 @@ subroutine run_socrates(Time, Time_diag, rad_lat, rad_lon, temp_in, q_in, t_surf
              endif
 
              temp_tend(:,:,:) = temp_tend(:,:,:) + real(output_heating_rate_sw)+real(output_heating_rate_lw)
-             output_heating_rate_total = output_heating_rate_sw +output_heating_rate_lw   
-             
+             output_heating_rate_total = output_heating_rate_sw +output_heating_rate_lw
+
             ! Send diagnostics
             if(id_soc_tdt_lw > 0) then
                 used = send_data ( id_soc_tdt_lw, output_heating_rate_lw, Time_diag)
@@ -823,7 +823,7 @@ subroutine run_socrates(Time, Time_diag, rad_lat, rad_lon, temp_in, q_in, t_surf
             endif
             if(id_soc_tdt_rad > 0) then
                 used = send_data ( id_soc_tdt_rad, output_heating_rate_total, Time_diag)
-            endif 
+            endif
             if(id_soc_surf_flux_lw > 0) then
                 used = send_data ( id_soc_surf_flux_lw, surf_lw_net, Time_diag)
             endif
@@ -855,19 +855,19 @@ subroutine run_socrates(Time, Time_diag, rad_lat, rad_lon, temp_in, q_in, t_surf
             if(id_soc_coszen > 0) then
                 used = send_data ( id_soc_coszen, coszen, Time_diag)
             endif
-            if(id_soc_co2 > 0) then 
+            if(id_soc_co2 > 0) then
                 used = send_data ( id_soc_co2, co2_in, Time_diag)
-            endif 
-            if(id_soc_ozone > 0) then 
+            endif
+            if(id_soc_ozone > 0) then
                 used = send_data ( id_soc_ozone, ozone_in, Time_diag)
             endif
-            if(id_soc_spectral_olr > 0) then 
+            if(id_soc_spectral_olr > 0) then
                 used = send_data ( id_soc_spectral_olr, outputted_soc_spectral_olr, Time_diag)
-            endif             
-            ! Diagnostics sent 
+            endif
+            ! Diagnostics sent
 
             return !not time yet
-        
+
           endif
 
 
@@ -880,27 +880,27 @@ subroutine run_socrates(Time, Time_diag, rad_lat, rad_lon, temp_in, q_in, t_surf
 
        !Set tide-locked flux if tidally-locked = .true. Else use diurnal-solar
        !to calculate insolation from orbit!
-       if (tidally_locked.eq..true.) then
+       if (tidally_locked.eqv..true.) then
             coszen = COS(rad_lat(:,:))*COS(rad_lon(:,:))
             WHERE (coszen < 0.0) coszen = 0.0
             rrsun = 1 ! needs to be set, set to 1 so that stellar_radiation is unchanged in socrates_interface
 
-       elseif (frierson_solar_rad .eq. .true.) then
+       elseif (frierson_solar_rad .eqv. .true.) then
             p2     = (1. - 3.*sin(rad_lat(:,:))**2)/4.
             coszen = 0.25 * (1.0 + del_sol * p2 + del_sw * sin(rad_lat(:,:)))
             rrsun  = 1 ! needs to be set, set to 1 so that stellar_radiation is unchanged in socrates_interface
 
        else
-       
+
         ! compute zenith angle
                  call get_time(Time_loc, seconds, days)
                  call get_time(length_of_year(), year_in_s)
                  day_in_s = length_of_day()
-         
+
                  r_seconds=real(seconds)
                  r_days=real(days)
                  r_total_seconds=r_seconds+(r_days*86400.)
-         
+
                  frac_of_day = r_total_seconds / day_in_s
 
                  if(solday > 0) then
@@ -910,8 +910,8 @@ subroutine run_socrates(Time, Time_diag, rad_lat, rad_lon, temp_in, q_in, t_surf
                      frac_of_year = r_total_seconds / year_in_s
                  endif
                  gmt = abs(mod(frac_of_day, 1.0)) * 2.0 * pi
-                 time_since_ae = modulo(frac_of_year-equinox_day, 1.0) * 2.0 * pi   
-       
+                 time_since_ae = modulo(frac_of_year-equinox_day, 1.0) * 2.0 * pi
+
            if(do_rad_time_avg) then
 	         r_dt_rad_avg=real(dt_rad_avg)
 	         dt_rad_radians = (r_dt_rad_avg/day_in_s)*2.0*pi
@@ -920,35 +920,35 @@ subroutine run_socrates(Time, Time_diag, rad_lat, rad_lon, temp_in, q_in, t_surf
 	         ! Seasonal Cycle: Use astronomical parameters to calculate insolation
 	         call diurnal_solar(rad_lat, rad_lon, gmt, time_since_ae, coszen, fracsun, rrsun)
            end if
-           
+
        endif
 
        ozone_in = 0.0
-       
-      !get ozone 
+
+      !get ozone
        if(do_read_ozone)then
          call interpolator( o3_interp, Time_diag, p_half_in, ozone_in, trim(ozone_field_name))
-         if (input_o3_file_is_mmr==.false.) then
+         if (input_o3_file_is_mmr.eqv..false.) then
              ozone_in = ozone_in * wtmozone / (1000. * gas_constant / rdgas ) !Socrates expects all abundances to be mass mixing ratio. So if input file is volume mixing ratio, it must be converted to mass mixing ratio using the molar masses of dry air and ozone
              ! Molar mass of dry air calculated from gas_constant / rdgas, and converted into g/mol from kg/mol by multiplying by 1000. This conversion is necessary because wtmozone is in g/mol.
-             
-         endif 
+
+         endif
        endif
 
-       if (input_co2_mmr==.false.) then
+       if (input_co2_mmr.eqv..false.) then
            co2_in = co2_ppmv * 1.e-6 * wtmco2 / (1000. * gas_constant / rdgas )!Convert co2_ppmv to a mass mixing ratio, as required by socrates
-             ! Molar mass of dry air calculated from gas_constant / rdgas, and converted into g/mol from kg/mol by multiplying by 1000. This conversion is necessary because wtmco2 is in g/mol.           
+             ! Molar mass of dry air calculated from gas_constant / rdgas, and converted into g/mol from kg/mol by multiplying by 1000. This conversion is necessary because wtmco2 is in g/mol.
        else
            co2_in = co2_ppmv * 1.e-6 !No need to convert if it is already a mmr
        endif
-      
-       !get co2 
+
+       !get co2
        if(do_read_co2)then
          call interpolator( co2_interp, Time_diag, p_half_in, co2_in, trim(co2_field_name))
-         if (input_co2_mmr==.false.) then
+         if (input_co2_mmr.eqv..false.) then
              co2_in = co2_in * 1.e-6 * wtmco2 / (1000. * gas_constant / rdgas )
              ! Molar mass of dry air calculated from gas_constant / rdgas, and converted into g/mol from kg/mol by multiplying by 1000. This conversion is necessary because wtmco2 is in g/mol.
-             
+
          endif
        endif
 
@@ -956,17 +956,17 @@ subroutine run_socrates(Time, Time_diag, rad_lat, rad_lon, temp_in, q_in, t_surf
        n_profile = INT(size(temp_in,2)*size(temp_in,1), kind(i_def))
        n_layer   = INT(size(temp_in,3), kind(i_def))
        t_surf_for_soc = REAL(t_surf_in(:,:), kind(r_def))
-       
+
        ! LW calculation
        ! Retrieve output_heating_rate, and downward surface SW and LW fluxes
        soc_lw_mode = .TRUE.
-   
+
        rad_lat_soc = REAL(rad_lat, kind(r_def))
        rad_lon_soc = REAL(rad_lon, kind(r_def))
        tg_tmp_soc =  REAL(temp_in, kind(r_def))
        q_soc      =  REAL(q_in, kind(r_def))
-       ozone_soc  =  REAL(ozone_in, kind(r_def)) 
-       co2_soc    =  REAL(co2_in, kind(r_def))      
+       ozone_soc  =  REAL(ozone_in, kind(r_def))
+       co2_soc    =  REAL(co2_in, kind(r_def))
        p_full_soc = REAL(p_full_in, kind(r_def))
        p_half_soc = REAL(p_half_in, kind(r_def))
        albedo_soc = REAL(albedo_in, kind(r_def))
@@ -984,7 +984,7 @@ subroutine run_socrates(Time, Time_diag, rad_lat, rad_lon, temp_in, q_in, t_surf
        thd_lw_flux_net = REAL(output_soc_flux_lw_up - output_soc_flux_lw_down)
 
        temp_tend(:,:,:) = temp_tend(:,:,:) + real(output_heating_rate_lw)
-       
+
        ! SW calculation
        ! Retrieve output_heating_rate, and downward surface SW and LW fluxes
        soc_lw_mode = .FALSE.
@@ -1001,7 +1001,7 @@ subroutine run_socrates(Time, Time_diag, rad_lat, rad_lon, temp_in, q_in, t_surf
 
 
        temp_tend(:,:,:) = temp_tend(:,:,:) + real(output_heating_rate_sw)
-       
+
        output_heating_rate_total = output_heating_rate_lw + output_heating_rate_sw
 
        if(store_intermediate_rad)then
@@ -1011,51 +1011,51 @@ subroutine run_socrates(Time, Time_diag, rad_lat, rad_lon, temp_in, q_in, t_surf
             net_surf_sw_down_store = real(net_surf_sw_down, kind(r_def))
             surf_lw_down_store = real(surf_lw_down, kind(r_def))
 
-            ! required for output 
-            if (id_soc_surf_flux_lw > 0) then 
-                surf_lw_net_store = real(surf_lw_net, kind(r_def)) 
-            endif 
+            ! required for output
+            if (id_soc_surf_flux_lw > 0) then
+                surf_lw_net_store = real(surf_lw_net, kind(r_def))
+            endif
 
-            if (id_soc_flux_lw > 0) then 
+            if (id_soc_flux_lw > 0) then
                 thd_lw_flux_net_store = thd_lw_flux_net
-            endif 
+            endif
 
-            if (id_soc_flux_sw > 0) then 
+            if (id_soc_flux_sw > 0) then
                 thd_sw_flux_net_store = thd_sw_flux_net
             endif
- 
-            if (id_soc_surf_flux_sw_down > 0) then 
-                surf_sw_down_store = surf_sw_down
-            endif 
 
-            if (id_soc_toa_sw_down > 0) then 
+            if (id_soc_surf_flux_sw_down > 0) then
+                surf_sw_down_store = surf_sw_down
+            endif
+
+            if (id_soc_toa_sw_down > 0) then
                 toa_sw_down_store = toa_sw_down
-            endif 
+            endif
 
             if (id_soc_olr > 0) then
                 olr_store = olr
-            endif 
+            endif
 
-            if (id_soc_toa_sw > 0) then 
+            if (id_soc_toa_sw > 0) then
                 toa_sw_store = toa_sw
-            endif 
+            endif
 
-            if (id_soc_coszen > 0) then 
+            if (id_soc_coszen > 0) then
                 coszen_store = coszen
-            endif 
+            endif
 
-            if (id_soc_ozone > 0) then 
+            if (id_soc_ozone > 0) then
                 thd_ozone_store = ozone_in
-            endif 
+            endif
 
-            if (id_soc_co2 > 0) then 
+            if (id_soc_co2 > 0) then
                 thd_co2_store = co2_in
             endif
-            
+
             if (id_soc_spectral_olr > 0) then
                 spectral_olr_store = outputted_soc_spectral_olr
-            endif       
-            
+            endif
+
        endif
 
         ! Send diagnostics
@@ -1067,7 +1067,7 @@ subroutine run_socrates(Time, Time_diag, rad_lat, rad_lon, temp_in, q_in, t_surf
         endif
         if(id_soc_tdt_rad > 0) then
             used = send_data ( id_soc_tdt_rad, output_heating_rate_total, Time_diag)
-        endif 
+        endif
         if(id_soc_surf_flux_lw > 0) then
             used = send_data ( id_soc_surf_flux_lw, surf_lw_net, Time_diag)
         endif
@@ -1098,27 +1098,27 @@ subroutine run_socrates(Time, Time_diag, rad_lat, rad_lon, temp_in, q_in, t_surf
         if(id_soc_coszen > 0) then
             used = send_data ( id_soc_coszen, coszen, Time_diag)
         endif
-        if(id_soc_co2 > 0) then 
+        if(id_soc_co2 > 0) then
             used = send_data ( id_soc_co2, co2_in, Time_diag)
-        endif 
-        if(id_soc_ozone > 0) then 
+        endif
+        if(id_soc_ozone > 0) then
             used = send_data ( id_soc_ozone, ozone_in, Time_diag)
-        endif 
-        if(id_soc_spectral_olr > 0) then 
+        endif
+        if(id_soc_spectral_olr > 0) then
             used = send_data ( id_soc_spectral_olr, outputted_soc_spectral_olr, Time_diag)
-        endif         
-        ! Diagnostics sent 
+        endif
+        ! Diagnostics sent
 
-end subroutine run_socrates  
+end subroutine run_socrates
 
 subroutine run_socrates_end
 
-    use interpolator_mod, only: interpolator_end 
-    USE socrates_config_mod    
+    use interpolator_mod, only: interpolator_end
+    USE socrates_config_mod
 
     if(do_read_ozone) call interpolator_end(o3_interp)
     if(do_read_co2)   call interpolator_end(co2_interp)
-    
+
 
 end subroutine run_socrates_end
 
@@ -1131,7 +1131,7 @@ end subroutine run_socrates_end
 
           integer i,k,kend
           real dzk,dzk1,dzk2
-          
+
 ! note: z_full(kend) = z_half(kend), so there's something fishy
 ! also, for some reason, z_half(k=1)=0. so we need to deal with k=1 separately
           kend=size(z_full,2)
@@ -1139,7 +1139,7 @@ end subroutine run_socrates_end
                 do i=1,size(temp_in,1)
                    dzk2 = 1./( z_full(i,k-1)   - z_full(i,k) )
                    dzk  = ( z_half(i,k  )   - z_full(i,k) )*dzk2
-                   dzk1 = ( z_full(i,k-1)   - z_half(i,k) )*dzk2 
+                   dzk1 = ( z_full(i,k-1)   - z_half(i,k) )*dzk2
                    t_half(i,k) = temp_in(i,k)*dzk1 + temp_in(i,k-1)*dzk
                 enddo
           enddo
@@ -1160,5 +1160,5 @@ end subroutine run_socrates_end
 
         end subroutine interp_temp
 !*****************************************************************************************
-  
+
 end module socrates_interface_mod
