@@ -30,7 +30,7 @@
 #include <sys/resource.h>
 #include <sys/syscall.h>
 
-static pid_t gettid(void)
+pid_t gettid(void)
 {
   return syscall(__NR_gettid);
 }
