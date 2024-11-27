@@ -1,7 +1,7 @@
 module purge
-module load netCDF-Fortran/4.4.5-IntelComp-2017.4-HDF5-1.10.1
-module load IntelComp/2017.4/OpenMPI/3.0.0
+module load iimpi/2021a
+module load netCDF-Fortran/4.5.3-iimpi-2021a
 
-export F90=mpifort
+export F90=mpiifort
 export CC=mpicc
 export GFDL_MKMF_TEMPLATE=enslyon
